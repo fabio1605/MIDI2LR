@@ -53,6 +53,7 @@ class MainContentComponent final :
    MainContentComponent& operator=(MainContentComponent&& other) = delete;
    void Init();
    void SaveProfile() const;
+   void SystemResumed();
 
  private:
    struct MidiDisplayPayload {
@@ -109,6 +110,8 @@ class MainContentComponent final :
    std::unique_ptr<juce::DialogWindow> settings_dialog_;
    /* hot-plug: rescan after the device list has been stable for a moment */
    juce::StringArray known_devices_;
+   juce::uint32 last_rescan_ms_ {0};
+   bool force_rescan_ {false};
    juce::TimedCallback device_rescan_timer_ {[this] { DeviceListChanged(); }};
    juce::MidiDeviceListConnection device_list_connection_; /* last: disconnect first */
 };

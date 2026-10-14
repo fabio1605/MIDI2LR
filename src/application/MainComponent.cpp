@@ -58,6 +58,8 @@ namespace {
    constexpr auto kDefaultsFile {MIDI2LR_UC_LITERAL("default.xml")};
    /* USB MIDI devices take a moment to settle after being plugged in */
    constexpr int kDeviceSettleMs {1500};
+   constexpr int kResumeSettleMs {3000};
+   constexpr juce::uint32 kRescanEchoMs {3000};
 
    juce::StringArray CurrentMidiDevices()
    {
@@ -187,15 +189,31 @@ void MainContentComponent::RescanClicked()
    /* Send new CC parameters to MIDI Out devices */
    lr_ipc_out_.SendCommand("FullRefresh 1\n");
    known_devices_ = CurrentMidiDevices();
+   last_rescan_ms_ = juce::Time::getMillisecondCounter();
+}
+
+void MainContentComponent::SystemResumed()
+{
+   /* devices may have been reset without the device list visibly changing */
+   force_rescan_ = true;
+   device_rescan_timer_.startTimer(kResumeSettleMs);
 }
 
 void MainContentComponent::DeviceListChanged()
 {
    try {
       device_rescan_timer_.stopTimer();
-      if (auto devices {CurrentMidiDevices()}; devices != known_devices_) {
-         rsj::Log(fmt::format("MIDI device list changed ({} devices), rescanning.", devices.size()),
+      const auto devices {CurrentMidiDevices()};
+      /* A device removed and re-added within the settle time leaves the list unchanged but the
+       * open handle dead, so rescan on any notification unless it is likely the echo of our own
+       * recent rescan. */
+      const auto changed {devices != known_devices_};
+      const auto echo {juce::Time::getMillisecondCounter() - last_rescan_ms_ < kRescanEchoMs};
+      if (changed || force_rescan_ || !echo) {
+         rsj::Log(fmt::format("MIDI devices changed ({} devices, {}), rescanning.", devices.size(),
+                      changed ? "list differs" : force_rescan_ ? "after resume" : "same list"),
              std::source_location::current());
+         force_rescan_ = false;
          RescanClicked();
       }
    }

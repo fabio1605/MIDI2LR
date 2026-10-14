@@ -199,6 +199,13 @@ class MIDI2LRApplication final : public juce::JUCEApplication {
 
    bool moreThanOneInstanceAllowed() noexcept override { return false; }
 
+   void resumed() override
+   {
+      /* USB MIDI devices are often reset across sleep, leaving the open handles dead */
+      rsj::Log("System resumed.", std::source_location::current());
+      if (main_window_) { main_window_->SystemResumed(); }
+   }
+
    void initialise(const juce::String& command_line) override
    {
       /*Called when the application starts. This will be called once to let the application do

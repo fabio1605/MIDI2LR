@@ -46,6 +46,8 @@ class MainWindow final : juce::DocumentWindow, juce::Timer {
 
    void SaveProfile() const { window_content_->SaveProfile(); }
 
+   void SystemResumed() { window_content_->SystemResumed(); }
+
    /* Note: Be careful if you override any DocumentWindow methods - the base class uses a lot of
     * them, so by overriding you might break its functionality. It's best to do all your work in
     * your content component instead, but if you really have to override any DocumentWindow methods,
